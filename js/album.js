@@ -4,7 +4,7 @@
 
 // Drime configuration (API key inserted)
 const DRIME_CONFIG = {
-    ACCESS_TOKEN: '26386|PE4t1f8RHAYoMJnSK5QIzAqlXeS9M18lbVQaei4Qde209bba', // ← आपकी Drime API key
+    ACCESS_TOKEN: '26394|1H4pU1xYP7MU3OsJCFZ341DElxnNUXkeKZqQimsE7788f83a', // ← आपकी Drime API key
     API_BASE_URL: 'https://api.drime.cloud/v1',
     ROOT_FOLDER: 'FamilyCloud'
 };
