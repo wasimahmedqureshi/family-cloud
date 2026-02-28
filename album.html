@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Album - FamilyCloud</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="album-nav">
+        <div class="nav-left">
+            <a href="index.html" class="nav-icon-btn" title="Home">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="dashboard.html" class="nav-icon-btn" title="Dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+        </div>
+        <h2><i class="fas fa-images"></i> Family Photo Album</h2>
+        <div class="album-controls">
+            <button onclick="downloadAllPhotos()" class="nav-btn" title="Download All">
+                <i class="fas fa-download"></i> Download All
+            </button>
+            <button onclick="toggleSlideshow()" class="nav-btn" title="Slideshow">
+                <i class="fas fa-play-circle"></i> Slideshow
+            </button>
+        </div>
+    </nav>
+
+    <div class="album-container">
+        <aside class="album-sidebar">
+            <h3><i class="fas fa-folder"></i> Albums</h3>
+            <ul class="album-list" id="albumList">
+                <li class="active" onclick="filterAlbum('all')">
+                    <i class="fas fa-photo-video"></i> All Photos
+                </li>
+                <li onclick="filterAlbum('vacation')">
+                    <i class="fas fa-umbrella-beach"></i> Vacation 2024
+                </li>
+                <li onclick="filterAlbum('birthday')">
+                    <i class="fas fa-birthday-cake"></i> Birthday Party
+                </li>
+                <li onclick="filterAlbum('family')">
+                    <i class="fas fa-users"></i> Family Gatherings
+                </li>
+                <li onclick="filterAlbum('holiday')">
+                    <i class="fas fa-snowman"></i> Holidays
+                </li>
+            </ul>
+            
+            <div class="album-stats">
+                <p><i class="fas fa-image"></i> Total: <span id="totalAlbumPhotos">24</span></p>
+                <button onclick="createNewAlbum()" class="btn-secondary">
+                    <i class="fas fa-plus-circle"></i> New Album
+                </button>
+            </div>
+        </aside>
+
+        <main class="album-grid" id="albumGrid">
+            <!-- Photos will be dynamically loaded here -->
+        </main>
+    </div>
+
+    <!-- Photo Viewer Modal -->
+    <div id="photoViewer" class="photo-viewer" onclick="closeViewer()">
+        <span class="close-viewer">&times;</span>
+        <img id="viewerImage" class="viewer-content" alt="">
+        <div class="viewer-controls">
+            <button onclick="downloadCurrentPhoto()" class="btn-primary">
+                <i class="fas fa-download"></i> Download
+            </button>
+            <button onclick="shareCurrentPhoto()" class="btn-secondary">
+                <i class="fas fa-share-alt"></i> Share
+            </button>
+        </div>
+        <button class="prev" onclick="changePhoto(-1)"><i class="fas fa-chevron-left"></i></button>
+        <button class="next" onclick="changePhoto(1)"><i class="fas fa-chevron-right"></i></button>
+    </div>
+
+    <script src="js/album.js"></script>
+</body>
+</html>
