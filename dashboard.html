@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FamilyCloud</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="dashboard-nav">
+        <div class="nav-left">
+            <div class="logo">
+                <i class="fas fa-cloud"></i>
+                <span>FamilyCloud</span>
+            </div>
+            <span class="welcome-msg" id="welcomeMessage"></span>
+        </div>
+        <div class="nav-right">
+            <a href="index.html" class="nav-btn" title="Home">
+                <i class="fas fa-home"></i> Home
+            </a>
+            <button onclick="enableOfflineMode()" class="nav-btn" title="Enable Offline Mode">
+                <i class="fas fa-cloud-download-alt"></i>
+            </button>
+            <button onclick="downloadAllPhotos()" class="nav-btn" title="Download All">
+                <i class="fas fa-download"></i>
+            </button>
+            <button onclick="showUploadModal()" class="nav-btn" title="Upload Photos">
+                <i class="fas fa-upload"></i>
+            </button>
+            <button onclick="logout()" class="nav-btn logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Stats Cards -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-images"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Total Photos</h3>
+                    <p id="totalPhotos">24</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Family Members</h3>
+                    <p>5</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Storage Used</h3>
+                    <p>156 MB</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+            <div class="action-grid">
+                <div class="action-card" onclick="window.location.href='album.html'">
+                    <div class="action-icon">
+                        <i class="fas fa-photo-video"></i>
+                    </div>
+                    <h3>View Albums</h3>
+                    <p>Browse all family photos</p>
+                </div>
+                
+                <div class="action-card" onclick="showUploadModal()">
+                    <div class="action-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3>Upload Photos</h3>
+                    <p>Add new memories</p>
+                </div>
+                
+                <div class="action-card" onclick="createAlbum()">
+                    <div class="action-icon">
+                        <i class="fas fa-folder-plus"></i>
+                    </div>
+                    <h3>Create Album</h3>
+                    <p>Organize photos</p>
+                </div>
+                
+                <div class="action-card" onclick="shareWithFamily()">
+                    <div class="action-icon">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <h3>Share</h3>
+                    <p>Share with family</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Photos -->
+        <div class="recent-photos">
+            <h2><i class="fas fa-clock"></i> Recent Photos</h2>
+            <div class="photo-preview-grid" id="recentPhotos">
+                <!-- Photos will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cloud-upload-alt"></i> Upload Photos</h2>
+                <span class="close" onclick="closeUploadModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoUpload').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop or click to upload</p>
+                    <small>Supports: JPG, PNG, GIF (Max 10MB each)</small>
+                </div>
+                <input type="file" id="photoUpload" multiple accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;">
+                <div id="uploadPreview" class="upload-preview"></div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeUploadModal()" class="btn-secondary">Cancel</button>
+                <button onclick="savePhotos()" class="btn-primary">Save Photos</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/album.js"></script>
+    <script src="js/offline.js"></script>
+</body>
+</html>
