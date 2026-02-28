@@ -45,7 +45,7 @@
                 </div>
                 <div class="stat-info">
                     <h3>Total Photos</h3>
-                    <p id="totalPhotos">24</p>
+                    <p id="totalPhotos">0</p>
                 </div>
             </div>
             <div class="stat-card">
@@ -62,8 +62,18 @@
                     <i class="fas fa-database"></i>
                 </div>
                 <div class="stat-info">
-                    <h3>Storage Used</h3>
+                    <h3>Local Storage</h3>
                     <p>156 MB</p>
+                </div>
+            </div>
+            <!-- Drime Storage Card -->
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-cloud"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Drime Cloud</h3>
+                    <div id="storageUsage" class="storage-info">Loading...</div>
                 </div>
             </div>
         </div>
@@ -110,7 +120,7 @@
         <div class="recent-photos">
             <h2><i class="fas fa-clock"></i> Recent Photos</h2>
             <div class="photo-preview-grid" id="recentPhotos">
-                <!-- Photos will be loaded here -->
+                <!-- Recent photos will be loaded here by album.js -->
             </div>
         </div>
     </div>
@@ -126,14 +136,14 @@
                 <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoUpload').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>Drag & drop or click to upload</p>
-                    <small>Supports: JPG, PNG, GIF (Max 10MB each)</small>
+                    <small>Supports: JPG, PNG, GIF (Max 2GB per file, thanks to Drime!)</small>
                 </div>
                 <input type="file" id="photoUpload" multiple accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;">
                 <div id="uploadPreview" class="upload-preview"></div>
             </div>
             <div class="modal-footer">
                 <button onclick="closeUploadModal()" class="btn-secondary">Cancel</button>
-                <button onclick="savePhotos()" class="btn-primary">Save Photos</button>
+                <button onclick="savePhotos()" class="btn-primary">Upload to Drime Cloud</button>
             </div>
         </div>
     </div>
