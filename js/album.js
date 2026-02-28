@@ -2,11 +2,11 @@
 // Drime Cloud Storage Integration
 // ============================================
 
-// Drime configuration (इसे config.js से भी ले सकते हैं)
+// Drime configuration (API key inserted)
 const DRIME_CONFIG = {
-    ACCESS_TOKEN: 'YOUR_DRIME_API_KEY_HERE',    // ← यहाँ अपनी Drime API key डालें
-    API_BASE_URL: 'https://api.drime.cloud/v1', // Drime API endpoint
-    ROOT_FOLDER: 'FamilyCloud'                   // फोटो स्टोर करने की फ़ोल्डर
+    ACCESS_TOKEN: '26386|PE4t1f8RHAYoMJnSK5QIzAqlXeS9M18lbVQaei4Qde209bba', // ← आपकी Drime API key
+    API_BASE_URL: 'https://api.drime.cloud/v1',
+    ROOT_FOLDER: 'FamilyCloud'
 };
 
 // DrimeStorage class
