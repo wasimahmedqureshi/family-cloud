@@ -1,108 +1,126 @@
 // ============================================
-// Family Cloud - Drime Cloud (20GB) + LocalStorage Fallback (Debug Mode)
+// Family Cloud - Jottacloud (5GB) + LocalStorage Fallback
 // ============================================
 
-// Drime configuration - आपकी नई API key
-const DRIME_CONFIG = {
-    ACCESS_TOKEN: '26596|bJjTxyCdlhmAAlunGjIs0A4c7YXxWorpt7kjDFKs7edddb66',
-    API_BASE_URL: 'https://api.drime.cloud/v1',
-    ROOT_FOLDER: 'FamilyCloud'
+// Jottacloud configuration - आपका नया token डाल दिया गया है
+const JOTTACLOUD_CONFIG = {
+    ACCESS_TOKEN: 'eyJ1c2VybmFtZSI6IjY5YTNmNmJlYWE1ODliMDAwMTA2NTEyYiIsInJlYWxtIjoiam90dGFjbG91ZCIsIndlbGxfa25vd25fbGluayI6Imh0dHBzOi8vaWQuam90dGFjbG91ZC5jb20vYXV0aC9yZWFsbXMvam90dGFjbG91ZC8ud2VsbC1rbm93bi9vcGVuaWQtY29uZmlndXJhdGlvbiIsImF1dGhfdG9rZW4iOiI0MEVFMEFBMUY0N0ZGNzIxOUMyMzBDNTg2QjY3QUZCMCJ9',
+    API_BASE_URL: 'https://api.jottacloud.com/v1',
+    ROOT_FOLDER: 'FamilyCloud',
+    USERNAME: '69a3f6beaa589b000106512b' // token से निकाला गया username
 };
 
 let photos = [];
-let useDrime = false;
-let drimeStorage = null;
+let useJottacloud = false;
+let jottacloudStorage = null;
 
-// ========== Drime Storage Class ==========
-class DrimeStorage {
+// ========== Jottacloud Storage Class ==========
+class JottacloudStorage {
     constructor(config) {
         this.accessToken = config.ACCESS_TOKEN;
         this.baseUrl = config.API_BASE_URL;
-        this.folderId = null;
-        this.workspaceId = null;
+        this.username = config.USERNAME;
+        this.folderPath = `/FamilyCloud`;
         this.isInitialized = false;
     }
 
     async init() {
         try {
-            console.log('🔄 Drime: Initializing...');
+            console.log('🔄 Jottacloud: Initializing...');
+            
             // 1. टोकन वैलिडेट करें
             const tokenValid = await this.validateToken();
             if (!tokenValid) {
-                console.warn('❌ Drime: Invalid token');
+                console.warn('❌ Jottacloud: Invalid token');
                 return false;
             }
-            console.log('✅ Drime: Token valid');
+            console.log('✅ Jottacloud: Token valid');
 
-            // 2. वर्कस्पेस जानकारी
-            const workspace = await this.apiRequest('/workspace');
-            this.workspaceId = workspace.id;
-            console.log('✅ Drime: Workspace ID =', this.workspaceId);
-
-            // 3. फोल्डर बनाएँ / प्राप्त करें
+            // 2. फोल्डर बनाएँ / प्राप्त करें
             await this.ensureFolder();
             
             this.isInitialized = true;
-            console.log('✅ Drime: Ready (20GB)');
+            console.log('✅ Jottacloud: Ready (5GB)');
             return true;
         } catch (error) {
-            console.error('❌ Drime init failed:', error);
+            console.error('❌ Jottacloud init failed:', error);
             return false;
         }
     }
 
     async validateToken() {
         try {
-            const response = await fetch(`${this.baseUrl}/auth/validate`, {
-                headers: { 'Authorization': `Bearer ${this.accessToken}` }
+            const response = await fetch(`${this.baseUrl}/user`, {
+                headers: { 
+                    'Authorization': `Bearer ${this.accessToken}`,
+                    'Accept': 'application/json'
+                }
             });
             return response.ok;
         } catch (e) {
-            console.warn('Drime validateToken error:', e);
+            console.warn('Jottacloud validateToken error:', e);
             return false;
         }
     }
 
     async apiRequest(endpoint, method = 'GET', body = null) {
         const url = `${this.baseUrl}${endpoint}`;
-        console.log(`Drime API: ${method} ${url}`);
-        const response = await fetch(url, {
+        console.log(`Jottacloud API: ${method} ${url}`);
+        
+        const headers = {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Accept': 'application/json'
+        };
+        
+        if (body && !(body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        const options = {
             method,
-            headers: {
-                'Authorization': `Bearer ${this.accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: body ? JSON.stringify(body) : null
-        });
+            headers
+        };
+
+        if (body) {
+            options.body = body instanceof FormData ? body : JSON.stringify(body);
+        }
+
+        const response = await fetch(url, options);
         if (!response.ok) {
             const text = await response.text();
-            throw new Error(`Drime API error (${response.status}): ${text}`);
+            throw new Error(`Jottacloud API error (${response.status}): ${text}`);
         }
+        
+        if (response.status === 204) {
+            return { success: true };
+        }
+        
         return await response.json();
     }
 
     async ensureFolder() {
-        const folders = await this.apiRequest('/folders');
-        let folder = folders.find(f => f.name === DRIME_CONFIG.ROOT_FOLDER);
-        if (!folder) {
-            folder = await this.apiRequest('/folders', 'POST', {
-                name: DRIME_CONFIG.ROOT_FOLDER
+        try {
+            // चेक करें कि फोल्डर पहले से है या नहीं
+            const response = await this.apiRequest(`/files/${this.username}/FamilyCloud`);
+            console.log('✅ Jottacloud: Folder exists');
+        } catch (error) {
+            // फोल्डर नहीं है तो बनाएँ
+            console.log('📁 Jottacloud: Creating folder...');
+            await this.apiRequest(`/files/${this.username}/`, 'POST', {
+                name: 'FamilyCloud',
+                type: 'folder'
             });
-            console.log('✅ Drime: Folder created');
-        } else {
-            console.log('✅ Drime: Folder exists');
+            console.log('✅ Jottacloud: Folder created');
         }
-        this.folderId = folder.id;
     }
 
     async uploadPhoto(file, onProgress) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('folderId', this.folderId);
 
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${this.baseUrl}/upload`);
+            xhr.open('POST', `${this.baseUrl}/files/${this.username}/FamilyCloud/${encodeURIComponent(file.name)}`);
             xhr.setRequestHeader('Authorization', `Bearer ${this.accessToken}`);
 
             xhr.upload.addEventListener('progress', (e) => {
@@ -117,12 +135,18 @@ class DrimeStorage {
                         const resp = JSON.parse(xhr.responseText);
                         resolve({
                             success: true,
-                            fileId: resp.id,
-                            url: resp.url,
-                            name: resp.name
+                            fileId: resp.id || resp.path,
+                            url: this.getPhotoUrl(file.name),
+                            name: file.name
                         });
                     } catch (e) {
-                        reject(e);
+                        // अगर response JSON नहीं है तो भी सफल मानें
+                        resolve({
+                            success: true,
+                            fileId: Date.now().toString(),
+                            url: this.getPhotoUrl(file.name),
+                            name: file.name
+                        });
                     }
                 } else {
                     reject(new Error(`Upload failed: ${xhr.status}`));
@@ -133,30 +157,45 @@ class DrimeStorage {
         });
     }
 
+    getPhotoUrl(filename) {
+        // Jottacloud पर फोटो का public URL
+        return `https://www.jottacloud.com/s/${this.username}/FamilyCloud/${encodeURIComponent(filename)}`;
+    }
+
     async getAllPhotos() {
-        const response = await this.apiRequest(`/folders/${this.folderId}/files`);
-        return response.files
-            .filter(f => f.mimeType?.startsWith('image/'))
-            .map(f => ({
-                id: f.id,
-                name: f.name,
-                url: f.url,
-                thumbnail: f.thumbnail || f.url,
-                uploadedAt: f.createdAt,
-                uploadedBy: 'family'
-            }));
+        try {
+            const response = await this.apiRequest(`/files/${this.username}/FamilyCloud`);
+            
+            if (!response || !response.children) {
+                return [];
+            }
+
+            return response.children
+                .filter(item => item.type === 'file' && item.mimeType?.startsWith('image/'))
+                .map(item => ({
+                    id: item.path || item.name,
+                    name: item.name,
+                    url: this.getPhotoUrl(item.name),
+                    thumbnail: this.getPhotoUrl(item.name),
+                    uploadedAt: item.modifiedAt || new Date().toISOString(),
+                    uploadedBy: 'family'
+                }));
+        } catch (error) {
+            console.error('❌ Jottacloud getAllPhotos error:', error);
+            return [];
+        }
     }
 
     async getStorageUsage() {
         try {
-            const usage = await this.apiRequest('/storage/usage');
+            const response = await this.apiRequest(`/user/${this.username}/usage`);
             return {
-                used: usage.used || 0,
-                total: usage.total || 20 * 1024 * 1024 * 1024,
-                percent: ((usage.used || 0) / (usage.total || 20e9)) * 100
+                used: response.used || 0,
+                total: response.total || 5 * 1024 * 1024 * 1024, // 5GB default
+                percent: ((response.used || 0) / (response.total || 5e9)) * 100
             };
         } catch {
-            return { used: 0, total: 20e9, percent: 0 };
+            return { used: 0, total: 5e9, percent: 0 };
         }
     }
 }
@@ -164,25 +203,25 @@ class DrimeStorage {
 // ========== सामान्य फोटो फंक्शन ==========
 
 function loadPhotos() {
-    console.log('📸 Loading photos... useDrime =', useDrime);
-    if (useDrime && drimeStorage?.isInitialized) {
-        loadPhotosFromDrime();
+    console.log('📸 Loading photos... useJottacloud =', useJottacloud);
+    if (useJottacloud && jottacloudStorage?.isInitialized) {
+        loadPhotosFromJottacloud();
     } else {
         loadPhotosFromLocal();
     }
 }
 
-async function loadPhotosFromDrime() {
+async function loadPhotosFromJottacloud() {
     try {
-        photos = await drimeStorage.getAllPhotos();
-        console.log('📸 Drime photos loaded:', photos.length);
+        photos = await jottacloudStorage.getAllPhotos();
+        console.log('📸 Jottacloud photos loaded:', photos.length);
         displayPhotos();
         updateStats();
         updateMemberCounts();
         updateStorageDisplay();
     } catch (error) {
-        console.error('❌ Drime load failed, switching to localStorage', error);
-        useDrime = false;
+        console.error('❌ Jottacloud load failed, switching to localStorage', error);
+        useJottacloud = false;
         loadPhotosFromLocal();
     }
 }
@@ -215,7 +254,7 @@ function displayPhotos() {
             <img src="${imgUrl}" alt="${photo.name}" loading="lazy">
             <div class="photo-info">
                 <h4>${photo.name.substring(0, 20)}${photo.name.length > 20 ? '...' : ''}</h4>
-                <p><i class="far fa-calendar-alt"></i> ${photo.uploadedAt || photo.date || 'अज्ञात'} • <i class="far fa-user"></i> ${photo.uploadedBy || 'family'}</p>
+                <p><i class="far fa-calendar-alt"></i> ${new Date(photo.uploadedAt || photo.date).toLocaleDateString('en-IN')} • <i class="far fa-user"></i> ${photo.uploadedBy || 'family'}</p>
                 <div class="photo-actions">
                     <button onclick="downloadPhoto(${index})" class="download-btn"><i class="fas fa-download"></i> Download</button>
                     <button onclick="sharePhoto(${index})" class="share-btn"><i class="fas fa-share-alt"></i> Share</button>
@@ -242,8 +281,8 @@ window.handlePhotoUpload = function(event) {
     console.log('📤 Files selected:', files.length);
 
     for (let file of files) {
-        if (file.size > (useDrime ? 2000 : 5) * 1024 * 1024) {
-            alert(`${file.name} बहुत बड़ा है। ${useDrime ? '2GB' : '5MB'} से छोटी फोटो चुनें।`);
+        if (file.size > (useJottacloud ? 100 : 5) * 1024 * 1024) { // Jottacloud 100MB तक, Local 5MB
+            alert(`${file.name} बहुत बड़ा है। ${useJottacloud ? '100MB' : '5MB'} से छोटी फोटो चुनें।`);
             continue;
         }
 
@@ -277,12 +316,12 @@ window.savePhotos = async function() {
 
     let successCount = 0;
 
-    if (useDrime) {
-        // Drime अपलोड
-        console.log('☁️ Uploading to Drime...');
+    if (useJottacloud) {
+        // Jottacloud अपलोड
+        console.log('☁️ Uploading to Jottacloud...');
         for (let file of files) {
             try {
-                const result = await drimeStorage.uploadPhoto(file, (percent) => {
+                const result = await jottacloudStorage.uploadPhoto(file, (percent) => {
                     const overall = (successCount * 100 + percent) / files.length;
                     updateUploadProgress(overall);
                 });
@@ -291,28 +330,26 @@ window.savePhotos = async function() {
                         id: result.fileId,
                         name: result.name,
                         url: result.url,
-                        uploadedAt: new Date().toLocaleDateString('en-IN'),
+                        uploadedAt: new Date().toISOString(),
                         uploadedBy: localStorage.getItem('user') || 'family'
                     });
                     successCount++;
                 }
             } catch (error) {
-                console.error('❌ Drime upload error:', error);
+                console.error('❌ Jottacloud upload error:', error);
             }
         }
         hideUploadProgress();
         if (successCount > 0) {
-            alert(`${successCount} फोटो Drime Cloud पर अपलोड हुईं! 20GB स्टोरेज ✅`);
+            alert(`${successCount} फोटो Jottacloud पर अपलोड हुईं! 5GB स्टोरेज ✅`);
             closeUploadModal();
             loadPhotos();
         } else {
-            alert('Drime अपलोड विफल। अब LocalStorage में अपलोड करते हैं।');
-            // Drime fail होने पर localStorage से प्रयास करें
-            useDrime = false;
+            alert('Jottacloud अपलोड विफल। अब LocalStorage में अपलोड करते हैं।');
+            useJottacloud = false;
             savePhotosLocal(files);
         }
     } else {
-        // सीधे LocalStorage अपलोड
         savePhotosLocal(files);
     }
 };
@@ -421,10 +458,10 @@ function updateStats() {
 function updateStorageDisplay() {
     const storageEl = document.getElementById('storageUsage');
     if (!storageEl) return;
-    if (useDrime) {
-        drimeStorage.getStorageUsage().then(usage => {
-            const usedGB = (usage.used / (1024**3)).toFixed(2);
-            storageEl.innerHTML = `<span>${usedGB} GB / 20 GB (Drime)</span><div class="storage-bar"><div class="storage-fill" style="width:${usage.percent}%"></div></div>`;
+    if (useJottacloud) {
+        jottacloudStorage.getStorageUsage().then(usage => {
+            const usedMB = (usage.used / (1024*1024)).toFixed(2);
+            storageEl.innerHTML = `<span>${usedMB} MB / 5 GB (Jottacloud)</span><div class="storage-bar"><div class="storage-fill" style="width:${usage.percent}%"></div></div>`;
         });
     } else {
         const totalSize = JSON.stringify(photos).length;
@@ -480,15 +517,15 @@ function hideUploadProgress() {
 // ========== इनिशियलाइज़ ==========
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 App starting...');
-    drimeStorage = new DrimeStorage(DRIME_CONFIG);
-    useDrime = await drimeStorage.init();
-    console.log('🔌 Drime available:', useDrime);
+    jottacloudStorage = new JottacloudStorage(JOTTACLOUD_CONFIG);
+    useJottacloud = await jottacloudStorage.init();
+    console.log('🔌 Jottacloud available:', useJottacloud);
     
     loadPhotos();
     
     const welcomeEl = document.getElementById('welcomeMessage');
     if (welcomeEl) {
         const user = localStorage.getItem('user') || 'Guest';
-        welcomeEl.innerHTML = `<i class="fas fa-hand-peace"></i> Welcome, ${user}! ${useDrime ? '(20GB Drime)' : '(Local Storage)'}`;
+        welcomeEl.innerHTML = `<i class="fas fa-hand-peace"></i> Welcome, ${user}! ${useJottacloud ? '(5GB Jottacloud)' : '(Local Storage)'}`;
     }
 });
