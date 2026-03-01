@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Navigation Bar -->
     <nav class="dashboard-nav">
         <div class="nav-left">
             <div class="logo">
@@ -18,6 +19,7 @@
             <span class="welcome-msg" id="welcomeMessage"></span>
         </div>
         <div class="nav-right">
+            <!-- Home Button -->
             <a href="index.html" class="nav-btn" title="Home">
                 <i class="fas fa-home"></i> Home
             </a>
@@ -54,7 +56,7 @@
                 </div>
                 <div class="stat-info">
                     <h3>Family Members</h3>
-                    <p>5</p>
+                    <p>6</p>
                 </div>
             </div>
             <div class="stat-card">
@@ -63,18 +65,50 @@
                 </div>
                 <div class="stat-info">
                     <h3>Local Storage</h3>
-                    <p>156 MB</p>
-                </div>
-            </div>
-            <!-- Drime Storage Card -->
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-cloud"></i>
-                </div>
-                <div class="stat-info">
-                    <h3>Drime Cloud</h3>
                     <div id="storageUsage" class="storage-info">Loading...</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Member Stats Section (आपके स्क्रीनशॉट के अनुसार) -->
+        <div class="member-stats">
+            <h2><i class="fas fa-users"></i> Family Members</h2>
+            <div class="member-grid">
+                <div class="member-card">
+                    <i class="fas fa-user-tie"></i>
+                    <h4>Papa</h4>
+                    <p id="count-papa">0 photos uploaded</p>
+                </div>
+                <div class="member-card">
+                    <i class="fas fa-user"></i>
+                    <h4>Mama</h4>
+                    <p id="count-mama">0 photos uploaded</p>
+                </div>
+                <div class="member-card">
+                    <i class="fas fa-user"></i>
+                    <h4>Bhaiya</h4>
+                    <p id="count-bhaiya">0 photos uploaded</p>
+                </div>
+                <div class="member-card">
+                    <i class="fas fa-user"></i>
+                    <h4>Didi</h4>
+                    <p id="count-didi">0 photos uploaded</p>
+                </div>
+                <div class="member-card">
+                    <i class="fas fa-user"></i>
+                    <h4>Dada</h4>
+                    <p id="count-dada">0 photos uploaded</p>
+                </div>
+                <div class="member-card">
+                    <i class="fas fa-user"></i>
+                    <h4>Dadi</h4>
+                    <p id="count-dadi">0 photos uploaded</p>
+                </div>
+            </div>
+            <div class="add-member">
+                <button onclick="addMember()" class="btn-secondary">
+                    <i class="fas fa-plus-circle"></i> Add Member
+                </button>
             </div>
         </div>
 
@@ -136,20 +170,55 @@
                 <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoUpload').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>Drag & drop or click to upload</p>
-                    <small>Supports: JPG, PNG, GIF (Max 2GB per file, thanks to Drime!)</small>
+                    <small>Supports: JPG, PNG, GIF (Max 5MB per photo)</small>
                 </div>
                 <input type="file" id="photoUpload" multiple accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;">
                 <div id="uploadPreview" class="upload-preview"></div>
             </div>
             <div class="modal-footer">
                 <button onclick="closeUploadModal()" class="btn-secondary">Cancel</button>
-                <button onclick="savePhotos()" class="btn-primary">Upload to Drime Cloud</button>
+                <button onclick="savePhotos()" class="btn-primary">Save Photos</button>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="js/auth.js"></script>
     <script src="js/album.js"></script>
     <script src="js/offline.js"></script>
+    <script>
+        // Add Member function (dummy for now)
+        function addMember() {
+            alert('Add Member feature coming soon! 👨‍👩‍👧‍👦');
+        }
+
+        // Share with family function
+        function shareWithFamily() {
+            alert('Share feature coming soon! 🔗');
+        }
+
+        // Enable offline mode function (from offline.js)
+        function enableOfflineMode() {
+            if ('caches' in window) {
+                caches.open('family-cloud-v1').then(cache => {
+                    cache.addAll([
+                        '/',
+                        '/index.html',
+                        '/login.html',
+                        '/dashboard.html',
+                        '/album.html',
+                        '/css/style.css',
+                        '/js/auth.js',
+                        '/js/album.js',
+                        '/js/offline.js'
+                    ]).then(() => {
+                        alert('Offline mode enabled! You can now access the app without internet.');
+                    });
+                });
+            } else {
+                alert('Your browser does not support offline mode.');
+            }
+        }
+    </script>
 </body>
 </html>
