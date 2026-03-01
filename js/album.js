@@ -2,12 +2,12 @@
 // Family Cloud - Jottacloud (5GB) + LocalStorage Fallback
 // ============================================
 
-// Jottacloud configuration - आपका नया token डाल दिया गया है
+// Jottacloud configuration - आपका token पहले से डाला गया है
 const JOTTACLOUD_CONFIG = {
     ACCESS_TOKEN: 'eyJ1c2VybmFtZSI6IjY5YTNmNmJlYWE1ODliMDAwMTA2NTEyYiIsInJlYWxtIjoiam90dGFjbG91ZCIsIndlbGxfa25vd25fbGluayI6Imh0dHBzOi8vaWQuam90dGFjbG91ZC5jb20vYXV0aC9yZWFsbXMvam90dGFjbG91ZC8ud2VsbC1rbm93bi9vcGVuaWQtY29uZmlndXJhdGlvbiIsImF1dGhfdG9rZW4iOiI0MEVFMEFBMUY0N0ZGNzIxOUMyMzBDNTg2QjY3QUZCMCJ9',
     API_BASE_URL: 'https://api.jottacloud.com/v1',
     ROOT_FOLDER: 'FamilyCloud',
-    USERNAME: '69a3f6beaa589b000106512b' // token से निकाला गया username
+    USERNAME: '69a3f6beaa589b000106512b'  // token से निकाला गया username
 };
 
 let photos = [];
@@ -28,13 +28,13 @@ class JottacloudStorage {
         try {
             console.log('🔄 Jottacloud: Initializing...');
             
-            // 1. टोकन वैलिडेट करें
-            const tokenValid = await this.validateToken();
-            if (!tokenValid) {
+            // 1. यूजर जानकारी प्राप्त करें - token वैलिडेशन के लिए
+            const userInfo = await this.getUserInfo();
+            if (!userInfo) {
                 console.warn('❌ Jottacloud: Invalid token');
                 return false;
             }
-            console.log('✅ Jottacloud: Token valid');
+            console.log('✅ Jottacloud: Token valid, user:', userInfo.username);
 
             // 2. फोल्डर बनाएँ / प्राप्त करें
             await this.ensureFolder();
@@ -48,7 +48,7 @@ class JottacloudStorage {
         }
     }
 
-    async validateToken() {
+    async getUserInfo() {
         try {
             const response = await fetch(`${this.baseUrl}/user`, {
                 headers: { 
@@ -56,10 +56,11 @@ class JottacloudStorage {
                     'Accept': 'application/json'
                 }
             });
-            return response.ok;
+            if (!response.ok) return null;
+            return await response.json();
         } catch (e) {
-            console.warn('Jottacloud validateToken error:', e);
-            return false;
+            console.warn('Jottacloud getUserInfo error:', e);
+            return null;
         }
     }
 
@@ -100,16 +101,20 @@ class JottacloudStorage {
 
     async ensureFolder() {
         try {
-            // चेक करें कि फोल्डर पहले से है या नहीं
-            const response = await this.apiRequest(`/files/${this.username}/FamilyCloud`);
-            console.log('✅ Jottacloud: Folder exists');
+            // फोल्डर के अस्तित्व की जाँच करें
+            const response = await this.apiRequest(`/files/${this.username}/FamilyCloud`, 'GET').catch(() => null);
+            if (response) {
+                console.log('✅ Jottacloud: Folder exists');
+                return;
+            }
         } catch (error) {
-            // फोल्डर नहीं है तो बनाएँ
+            // फोल्डर नहीं है, इसे बनाएँ
             console.log('📁 Jottacloud: Creating folder...');
-            await this.apiRequest(`/files/${this.username}/`, 'POST', {
-                name: 'FamilyCloud',
-                type: 'folder'
-            });
+            const formData = new FormData();
+            formData.append('name', 'FamilyCloud');
+            formData.append('type', 'folder');
+            
+            await this.apiRequest(`/files/${this.username}/`, 'POST', formData);
             console.log('✅ Jottacloud: Folder created');
         }
     }
@@ -136,7 +141,7 @@ class JottacloudStorage {
                         resolve({
                             success: true,
                             fileId: resp.id || resp.path,
-                            url: this.getPhotoUrl(file.name),
+                            url: `https://www.jottacloud.com/s/${this.username}/FamilyCloud/${encodeURIComponent(file.name)}`,
                             name: file.name
                         });
                     } catch (e) {
@@ -144,7 +149,7 @@ class JottacloudStorage {
                         resolve({
                             success: true,
                             fileId: Date.now().toString(),
-                            url: this.getPhotoUrl(file.name),
+                            url: `https://www.jottacloud.com/s/${this.username}/FamilyCloud/${encodeURIComponent(file.name)}`,
                             name: file.name
                         });
                     }
@@ -155,11 +160,6 @@ class JottacloudStorage {
             xhr.onerror = () => reject(new Error('Network error'));
             xhr.send(formData);
         });
-    }
-
-    getPhotoUrl(filename) {
-        // Jottacloud पर फोटो का public URL
-        return `https://www.jottacloud.com/s/${this.username}/FamilyCloud/${encodeURIComponent(filename)}`;
     }
 
     async getAllPhotos() {
@@ -175,8 +175,8 @@ class JottacloudStorage {
                 .map(item => ({
                     id: item.path || item.name,
                     name: item.name,
-                    url: this.getPhotoUrl(item.name),
-                    thumbnail: this.getPhotoUrl(item.name),
+                    url: `https://www.jottacloud.com/s/${this.username}/FamilyCloud/${encodeURIComponent(item.name)}`,
+                    thumbnail: `https://www.jottacloud.com/s/${this.username}/FamilyCloud/${encodeURIComponent(item.name)}`,
                     uploadedAt: item.modifiedAt || new Date().toISOString(),
                     uploadedBy: 'family'
                 }));
@@ -461,7 +461,14 @@ function updateStorageDisplay() {
     if (useJottacloud) {
         jottacloudStorage.getStorageUsage().then(usage => {
             const usedMB = (usage.used / (1024*1024)).toFixed(2);
-            storageEl.innerHTML = `<span>${usedMB} MB / 5 GB (Jottacloud)</span><div class="storage-bar"><div class="storage-fill" style="width:${usage.percent}%"></div></div>`;
+            const usedGB = (usage.used / (1024*1024*1024)).toFixed(2);
+            const percent = usage.percent;
+            
+            if (usage.used < 1024 * 1024 * 1024) {
+                storageEl.innerHTML = `<span>${usedMB} MB / 5 GB (Jottacloud)</span><div class="storage-bar"><div class="storage-fill" style="width:${percent}%"></div></div>`;
+            } else {
+                storageEl.innerHTML = `<span>${usedGB} GB / 5 GB (Jottacloud)</span><div class="storage-bar"><div class="storage-fill" style="width:${percent}%"></div></div>`;
+            }
         });
     } else {
         const totalSize = JSON.stringify(photos).length;
