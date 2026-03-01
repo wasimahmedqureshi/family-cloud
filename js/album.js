@@ -1,8 +1,8 @@
 // ============================================
-// Family Cloud - Drime Cloud (20GB) + LocalStorage Fallback
+// Family Cloud - Drime Cloud (20GB) + LocalStorage Fallback (Debug Mode)
 // ============================================
 
-// Drime configuration - आपकी नई API key डाल दी गई है
+// Drime configuration - आपकी नई API key
 const DRIME_CONFIG = {
     ACCESS_TOKEN: '26596|bJjTxyCdlhmAAlunGjIs0A4c7YXxWorpt7kjDFKs7edddb66',
     API_BASE_URL: 'https://api.drime.cloud/v1',
@@ -10,7 +10,7 @@ const DRIME_CONFIG = {
 };
 
 let photos = [];
-let useDrime = false; // Drime उपलब्ध होने पर true होगा
+let useDrime = false;
 let drimeStorage = null;
 
 // ========== Drime Storage Class ==========
@@ -25,25 +25,28 @@ class DrimeStorage {
 
     async init() {
         try {
+            console.log('🔄 Drime: Initializing...');
             // 1. टोकन वैलिडेट करें
             const tokenValid = await this.validateToken();
             if (!tokenValid) {
-                console.warn('Drime token invalid, falling back to localStorage');
+                console.warn('❌ Drime: Invalid token');
                 return false;
             }
+            console.log('✅ Drime: Token valid');
 
             // 2. वर्कस्पेस जानकारी
             const workspace = await this.apiRequest('/workspace');
             this.workspaceId = workspace.id;
+            console.log('✅ Drime: Workspace ID =', this.workspaceId);
 
             // 3. फोल्डर बनाएँ / प्राप्त करें
             await this.ensureFolder();
             
             this.isInitialized = true;
-            console.log('✅ Drime Cloud ready (20GB)');
+            console.log('✅ Drime: Ready (20GB)');
             return true;
         } catch (error) {
-            console.warn('Drime init failed, using localStorage:', error);
+            console.error('❌ Drime init failed:', error);
             return false;
         }
     }
@@ -54,13 +57,16 @@ class DrimeStorage {
                 headers: { 'Authorization': `Bearer ${this.accessToken}` }
             });
             return response.ok;
-        } catch {
+        } catch (e) {
+            console.warn('Drime validateToken error:', e);
             return false;
         }
     }
 
     async apiRequest(endpoint, method = 'GET', body = null) {
-        const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        const url = `${this.baseUrl}${endpoint}`;
+        console.log(`Drime API: ${method} ${url}`);
+        const response = await fetch(url, {
             method,
             headers: {
                 'Authorization': `Bearer ${this.accessToken}`,
@@ -68,7 +74,10 @@ class DrimeStorage {
             },
             body: body ? JSON.stringify(body) : null
         });
-        if (!response.ok) throw new Error(`Drime API error: ${response.status}`);
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Drime API error (${response.status}): ${text}`);
+        }
         return await response.json();
     }
 
@@ -79,6 +88,9 @@ class DrimeStorage {
             folder = await this.apiRequest('/folders', 'POST', {
                 name: DRIME_CONFIG.ROOT_FOLDER
             });
+            console.log('✅ Drime: Folder created');
+        } else {
+            console.log('✅ Drime: Folder exists');
         }
         this.folderId = folder.id;
     }
@@ -116,7 +128,7 @@ class DrimeStorage {
                     reject(new Error(`Upload failed: ${xhr.status}`));
                 }
             };
-            xhr.onerror = () => reject(new Error('Upload failed'));
+            xhr.onerror = () => reject(new Error('Network error'));
             xhr.send(formData);
         });
     }
@@ -131,7 +143,7 @@ class DrimeStorage {
                 url: f.url,
                 thumbnail: f.thumbnail || f.url,
                 uploadedAt: f.createdAt,
-                uploadedBy: 'family' // Drime से uploader info नहीं मिलती
+                uploadedBy: 'family'
             }));
     }
 
@@ -140,7 +152,7 @@ class DrimeStorage {
             const usage = await this.apiRequest('/storage/usage');
             return {
                 used: usage.used || 0,
-                total: usage.total || 20 * 1024 * 1024 * 1024, // 20GB
+                total: usage.total || 20 * 1024 * 1024 * 1024,
                 percent: ((usage.used || 0) / (usage.total || 20e9)) * 100
             };
         } catch {
@@ -149,9 +161,10 @@ class DrimeStorage {
     }
 }
 
-// ========== सामान्य फोटो फंक्शन (दोनों मोड के लिए) ==========
+// ========== सामान्य फोटो फंक्शन ==========
 
 function loadPhotos() {
+    console.log('📸 Loading photos... useDrime =', useDrime);
     if (useDrime && drimeStorage?.isInitialized) {
         loadPhotosFromDrime();
     } else {
@@ -162,12 +175,13 @@ function loadPhotos() {
 async function loadPhotosFromDrime() {
     try {
         photos = await drimeStorage.getAllPhotos();
+        console.log('📸 Drime photos loaded:', photos.length);
         displayPhotos();
         updateStats();
         updateMemberCounts();
         updateStorageDisplay();
     } catch (error) {
-        console.warn('Drime load failed, switching to localStorage', error);
+        console.error('❌ Drime load failed, switching to localStorage', error);
         useDrime = false;
         loadPhotosFromLocal();
     }
@@ -176,6 +190,7 @@ async function loadPhotosFromDrime() {
 function loadPhotosFromLocal() {
     const saved = localStorage.getItem('familyPhotos');
     photos = saved ? JSON.parse(saved) : [];
+    console.log('📸 Local photos loaded:', photos.length);
     displayPhotos();
     updateStats();
     updateMemberCounts();
@@ -214,15 +229,20 @@ function displayPhotos() {
     });
 }
 
-// ========== अपलोड हैंडलर (Drime या Local) ==========
+// ========== अपलोड हैंडलर ==========
 
 window.handlePhotoUpload = function(event) {
     const files = event.target.files;
     const preview = document.getElementById('uploadPreview');
+    if (!preview) {
+        console.error('❌ Preview element not found');
+        return;
+    }
     preview.innerHTML = '';
+    console.log('📤 Files selected:', files.length);
 
     for (let file of files) {
-        if (file.size > (useDrime ? 2000 : 5) * 1024 * 1024) { // Drime 2GB तक, Local 5MB
+        if (file.size > (useDrime ? 2000 : 5) * 1024 * 1024) {
             alert(`${file.name} बहुत बड़ा है। ${useDrime ? '2GB' : '5MB'} से छोटी फोटो चुनें।`);
             continue;
         }
@@ -241,22 +261,30 @@ window.handlePhotoUpload = function(event) {
 
 window.savePhotos = async function() {
     const fileInput = document.getElementById('photoUpload');
-    if (!fileInput || fileInput.files.length === 0) {
+    if (!fileInput) {
+        console.error('❌ File input not found');
+        alert('फाइल इनपुट नहीं मिला। पेज रिफ्रेश करें।');
+        return;
+    }
+    if (fileInput.files.length === 0) {
         alert('कोई फोटो नहीं चुनी गई।');
         return;
     }
 
     const files = Array.from(fileInput.files);
+    console.log('💾 Saving', files.length, 'photos...');
     showUploadProgress();
 
     let successCount = 0;
 
     if (useDrime) {
         // Drime अपलोड
+        console.log('☁️ Uploading to Drime...');
         for (let file of files) {
             try {
                 const result = await drimeStorage.uploadPhoto(file, (percent) => {
-                    updateUploadProgress((successCount * 100 + percent) / files.length);
+                    const overall = (successCount * 100 + percent) / files.length;
+                    updateUploadProgress(overall);
                 });
                 if (result.success) {
                     photos.push({
@@ -269,47 +297,76 @@ window.savePhotos = async function() {
                     successCount++;
                 }
             } catch (error) {
-                console.error('Drime upload failed', error);
+                console.error('❌ Drime upload error:', error);
             }
         }
-    } else {
-        // LocalStorage अपलोड
-        const currentUser = localStorage.getItem('user') || 'family';
-        for (let file of files) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                photos.push({
-                    id: Date.now() + Math.random(),
-                    name: file.name,
-                    dataUrl: e.target.result,
-                    date: new Date().toLocaleDateString('en-IN'),
-                    uploadedBy: currentUser
-                });
-                successCount++;
-                if (successCount === files.length) {
-                    localStorage.setItem('familyPhotos', JSON.stringify(photos));
-                    hideUploadProgress();
-                    alert(`${successCount} फोटो सफलतापूर्वक अपलोड हुईं! 🎉`);
-                    closeUploadModal();
-                    loadPhotos();
-                }
-            };
-            reader.readAsDataURL(file);
+        hideUploadProgress();
+        if (successCount > 0) {
+            alert(`${successCount} फोटो Drime Cloud पर अपलोड हुईं! 20GB स्टोरेज ✅`);
+            closeUploadModal();
+            loadPhotos();
+        } else {
+            alert('Drime अपलोड विफल। अब LocalStorage में अपलोड करते हैं।');
+            // Drime fail होने पर localStorage से प्रयास करें
+            useDrime = false;
+            savePhotosLocal(files);
         }
-        return; // asynchronous loop के लिए early return
-    }
-
-    hideUploadProgress();
-    if (successCount > 0) {
-        alert(`${successCount} फोटो Drime Cloud पर अपलोड हुईं! 20GB स्टोरेज उपलब्ध ✅`);
-        closeUploadModal();
-        loadPhotos();
     } else {
-        alert('अपलोड विफल। Drime से कनेक्शन जांचें।');
+        // सीधे LocalStorage अपलोड
+        savePhotosLocal(files);
     }
 };
 
-// ========== अन्य फंक्शन (डाउनलोड, शेयर, व्यूअर) ==========
+function savePhotosLocal(files) {
+    console.log('💾 Saving to localStorage...');
+    const currentUser = localStorage.getItem('user') || 'family';
+    let processed = 0;
+    let totalFiles = files.length;
+
+    files.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) {
+            alert(`${file.name} 5MB से बड़ा है, छोड़ा गया।`);
+            processed++;
+            if (processed === totalFiles) {
+                finalizeLocalSave();
+            }
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            photos.push({
+                id: Date.now() + Math.random(),
+                name: file.name,
+                dataUrl: e.target.result,
+                date: new Date().toLocaleDateString('en-IN'),
+                uploadedBy: currentUser
+            });
+            processed++;
+            if (processed === totalFiles) {
+                finalizeLocalSave();
+            }
+        };
+        reader.onerror = function(err) {
+            console.error('FileReader error:', err);
+            processed++;
+            if (processed === totalFiles) {
+                finalizeLocalSave();
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function finalizeLocalSave() {
+        localStorage.setItem('familyPhotos', JSON.stringify(photos));
+        hideUploadProgress();
+        alert(`${totalFiles} फोटो सफलतापूर्वक LocalStorage में अपलोड हुईं! 🎉`);
+        closeUploadModal();
+        loadPhotos();
+    }
+}
+
+// ========== डाउनलोड / शेयर / व्यूअर ==========
 
 window.downloadPhoto = function(index) {
     const photo = photos[index];
@@ -334,7 +391,6 @@ window.sharePhoto = function(index) {
     }
 };
 
-// फोटो व्यूअर
 let currentPhotoIndex = 0;
 window.openPhotoViewer = function(index) {
     if (photos.length === 0) return;
@@ -368,12 +424,13 @@ function updateStorageDisplay() {
     if (useDrime) {
         drimeStorage.getStorageUsage().then(usage => {
             const usedGB = (usage.used / (1024**3)).toFixed(2);
-            storageEl.innerHTML = `<span>${usedGB} GB / 20 GB (Drime)</span>`;
+            storageEl.innerHTML = `<span>${usedGB} GB / 20 GB (Drime)</span><div class="storage-bar"><div class="storage-fill" style="width:${usage.percent}%"></div></div>`;
         });
     } else {
         const totalSize = JSON.stringify(photos).length;
         const mb = (totalSize / (1024*1024)).toFixed(2);
-        storageEl.innerHTML = `<span>${mb} MB / 10 MB (Local)</span>`;
+        const percent = Math.min((totalSize / (10 * 1024 * 1024)) * 100, 100);
+        storageEl.innerHTML = `<span>${mb} MB / 10 MB (Local)</span><div class="storage-bar"><div class="storage-fill" style="width:${percent}%"></div></div>`;
     }
 }
 
@@ -388,12 +445,16 @@ function updateMemberCounts() {
 
 // ========== मोडल फंक्शन ==========
 window.showUploadModal = function() {
-    document.getElementById('uploadModal')?.classList.add('active');
+    const modal = document.getElementById('uploadModal');
+    if (modal) modal.classList.add('active');
 };
 window.closeUploadModal = function() {
-    document.getElementById('uploadModal')?.classList.remove('active');
-    document.getElementById('uploadPreview').innerHTML = '';
-    document.getElementById('photoUpload').value = '';
+    const modal = document.getElementById('uploadModal');
+    const preview = document.getElementById('uploadPreview');
+    const fileInput = document.getElementById('photoUpload');
+    if (modal) modal.classList.remove('active');
+    if (preview) preview.innerHTML = '';
+    if (fileInput) fileInput.value = '';
 };
 
 // प्रोग्रेस बार
@@ -412,14 +473,16 @@ function updateUploadProgress(percent) {
     if (fill) fill.style.width = percent + '%';
 }
 function hideUploadProgress() {
-    document.getElementById('uploadProgress')?.remove();
+    const prog = document.getElementById('uploadProgress');
+    if (prog) prog.remove();
 }
 
 // ========== इनिशियलाइज़ ==========
 document.addEventListener('DOMContentLoaded', async function() {
-    // Drime प्रयास करें
+    console.log('🚀 App starting...');
     drimeStorage = new DrimeStorage(DRIME_CONFIG);
     useDrime = await drimeStorage.init();
+    console.log('🔌 Drime available:', useDrime);
     
     loadPhotos();
     
